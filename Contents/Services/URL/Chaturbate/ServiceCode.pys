@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+
+"""Chaturbate Service code - Return m3u8 stream"""
+
+HTTP_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'}
+HTTP_HEADERS_IPAD = {'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4'}
+
+####################################################################################################
+def NormalizeURL(url):
+    """This function should return a 'normalised' version of the given URL. Plex uses the URL"""
+
+    return url
+
+####################################################################################################
+def MetadataObjectForURL(url):
+    """
+    This function should create and return a metadata object (for example, a VideoClipOb-
+    ject) and populate it with metadata from the given URL. Only the metadata should be
+    added here - the object's key and rating_key properties will be synthesised based on the URL.
+    """
+
+    html = HTML.ElementFromURL(url)
+
+    title = html.xpath('//ul[@class="sub-nav"]//a/text()')[0].strip()
+    slug = url.rsplit('/', 2)[1]
+    Log.Info('title = %s' %title)
+    Log.Info('slug = %s' %slug)
+
+    q = []
+    a = []
+    for node in html.xpath('//div[@class="bio"]//dl/dt'):
+        q_text = node.text
+        if not q_text == 'About Me:' and not q_text == 'Pics & Videos:' and not q_text == 'Wish List:':
+            q.append(q_text.strip())
+        else:
+            break
+
+    for i, node in enumerate(html.xpath('//div[@class="bio"]//dl/dd')):
+        if not i == len(q):
+            try:
+                a_text = node.text
+                a.append(a_text.strip())
+            except:
+                pass
+
+    Log.Debug('q & a = %s %s' %(q, a))
+    Log.Debug('q & a len = %i %i' %(len(q), len(a)))
+
+    summary_list = []
+    for x, y in map(None, q, a):
+        summary_list.append(x + ' ' + y)
+
+    if len(summary_list) > 0:
+        summary = '\r'.join(summary_list).strip()
+    else:
+        summary = None
+
+    return VideoClipObject(
+        title=title,
+        summary=summary,
+        thumb='https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg' %slug)
+
+####################################################################################################
+def MediaObjectsForURL(url):
+    """
+    This function should create and return a list of media objects and part objects representing
+    the media available at the given URL. Callbacks may be used if obtaining the final media
+    location requires additional computation.
+    """
+
+    return [
+        MediaObject(
+            parts=[PartObject(key=HTTPLiveStreamURL(Callback(PlayVideo, url=url)))],
+            audio_channels=2,
+            optimized_for_streaming=True
+            )
+        ]
+
+####################################################################################################
+@indirect
+def PlayVideo(url, **kwargs):
+    """Get m3u8 playlist"""
+
+    html = HTML.ElementFromURL(url, headers=HTTP_HEADERS_IPAD)
+
+    try:
+        m3u8_url = html.xpath('//video[@id="still_video_object"]')[0].get('src').replace(' ', '').strip()
+    except:
+        m3u8_url = None
+
+    Log('m3u8 url = %s' %m3u8_url)
+
+    if not m3u8_url:
+        raise Ex.MediaNotAvailable
+
+    return IndirectResponse(VideoClipObject, key=HTTPLiveStreamURL(m3u8_url))
