@@ -10,12 +10,13 @@
       <string>com.plexapp.plugins.chaturbate</string>
       <key>URLPatterns</key>
       <array>
-        <string>^https?://(?:[^/]+\.)?chaturbate\.com/(?:.+)/$</string>
+        <string>^https?://(?:[^/]+\.|)?chaturbate\.com/(?:.+)/$</string>
       </array>
       <key>TestURLs</key>
       <array>
         <string>https://www.chaturbate.com/siswet19/</string>
         <string>https://en.chaturbate.com/siswet19/</string>
+        <string>https://chaturbate.com/siswet19/</string>
       </array>
     </dict>
   </dict>
