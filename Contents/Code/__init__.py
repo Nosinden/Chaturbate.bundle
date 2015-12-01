@@ -1,6 +1,6 @@
 ####################################################################################################
 #                                                                                                  #
-#                               Chaturbate Plex Channel -- v0.01                                   #
+#                                   Chaturbate Plex Channel                                        #
 #                                                                                                  #
 ####################################################################################################
 # set global variables
@@ -9,64 +9,116 @@ TITLE = 'Chaturbate'
 BASE_URL = 'https://chaturbate.com'
 ICON = 'icon-default.png'
 
+CAT_LIST = ['Free Cams', 'Free Cams by Age', 'Free Cams by Region', 'Free Cams by Status']
+
+MAIN_LIST = [
+    ('Featured', ''), ('Female', '/female'), ('Male', '/male'),
+    ('Couple', '/couple'), ('Transsexual', '/transsexual')
+    ]
+
+AGE_LIST = [
+    ('Teen Cams (18+)', '/teen-cams'), ('18 to 21 Cams', '/18to21-cams'),
+    ('20 to 30 Cams', '/20to30-cams'), ('30 to 50 Cams', '/30to50-cams'),
+    ('Mature Cams (50+)', '/mature-cams')
+    ]
+
+REGION_LIST = [
+    ('North American Cams', '/north-american-cams'), ('Other Region Cams', '/other-region-cams'),
+    ('Euro Russian Cams', '/euro-russian-cams'), ('Philippines Cams', '/philippines-cams'),
+    ('Asian Cams', '/asian-cams'), ('South American Cams', '/south-american-cams')
+    ]
+
+STATUS_LIST = [
+    ('Exhibitionist Cams', '/exhibitionist-cams'), ('HD Cams', '/hd-cams')
+    ]
+
+CAT_DICT = {'Age': {'list': AGE_LIST}}
+CAT_DICT.update({'Region': {'list': REGION_LIST}})
+CAT_DICT.update({'Status': {'list': STATUS_LIST}})
+
 ####################################################################################################
 
 def Start():
-    #ObjectContainer.art = R(ART)
     ObjectContainer.title1 = TITLE
 
     DirectoryObject.thumb = R(ICON)
 
     HTTP.CacheTime = 0
-    #HTTP.Headers['User-Agent'] = Test.USER_AGENT
 
 ####################################################################################################
-# Create the main menu
-
 @handler(PREFIX, TITLE, ICON)
 def MainMenu():
+    """
+    Setup Main menu
+    Free Cams', Free Cams by Age', Free Cams by Region, Free Cams by Status
+    """
+
     oc = ObjectContainer(title2=TITLE)
 
-    oc.add(DirectoryObject(key=Callback(DirectoryList, url=BASE_URL, page=int(1)), title='Featured'))
-    oc.add(DirectoryObject(key=Callback(DirectoryList, url=BASE_URL + '/female-cams', page=int(1)), title='Female'))
-    oc.add(DirectoryObject(key=Callback(DirectoryList, url=BASE_URL + '/male-cams', page=int(1)), title='Male'))
-    oc.add(DirectoryObject(key=Callback(DirectoryList, url=BASE_URL + '/couple-cams', page=int(1)), title='Couple'))
-    oc.add(DirectoryObject(key=Callback(DirectoryList, url=BASE_URL + '/transsexual-cams', page=int(1)), title='Transsexual'))
+    for t in CAT_LIST:
+        oc.add(DirectoryObject(key=Callback(SubList, title=t), title=t))
 
     return oc
 
 ####################################################################################################
-# list cams
+@route(PREFIX + '/catlist')
+def SubList(title):
+    """
+    Setup Sub list
+    Main, Age, Region, Status
+    """
 
-@route(PREFIX + '/directorylist')
-def DirectoryList(url, page=int):
-    url_cat = url.rsplit('/', 1)[-1]
-    if url_cat == 'chaturbate.com':
-        url_cat == BASE_URL
+    oc = ObjectContainer(title2=title)
 
-    url_page = url + '/?page=%i' %int(page)
-
-    if 'female-cam' in url_cat:
-        title2 = 'Female'
-    elif 'male-cam' in url_cat:
-        title2 = 'Male'
-    elif 'couple-cam' in url_cat:
-        title2 = 'Couple'
-    elif 'transsexual-cam' in url_cat:
-        title2 = 'Transsexual'
+    if title == 'Free Cams':
+        cat_list_t = [(n, c+'-cams') for (n, c) in MAIN_LIST]
+        for (n, c) in cat_list_t:
+            name =  '%s | %s' %(title, n)
+            if n == 'Featured':
+                oc.add(DirectoryObject(key=Callback(DirectoryList, title=name, url=BASE_URL, page=1), title=n))
+            else:
+                oc.add(DirectoryObject(key=Callback(DirectoryList, title=name, url=BASE_URL + c, page=1), title=n))
     else:
-        title2 = 'Featured'
+        cat_list_t = CAT_DICT[title.split('by')[-1].strip()]['list']
+        for (n, c) in cat_list_t:
+            name = '%s | %s' %(title, n)
+            oc.add(DirectoryObject(key=Callback(CatList, title=name, url=BASE_URL + c), title=n))
 
-    html = HTML.ElementFromURL(url_page)
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/subcatlist')
+def CatList(title, url):
+    """
+    Setup Category List
+    Featured, Female, Male, Couple, Transsexual
+    """
+
+    oc = ObjectContainer(title2=title)
+
+    for (n, c) in MAIN_LIST:
+        name = '%s | %s' %(title, n)
+        oc.add(DirectoryObject(key=Callback(DirectoryList, title=name, url=url + c, page=1), title=n))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/directorylist', page=int)
+def DirectoryList(title, url, page):
+    """List Currently active cams"""
+
+    url = url + '/?page=%i' %page
+
+    html = HTML.ElementFromURL(url)
 
     # parse html for 'next' and 'last' page number
     next_pg_node = html.xpath('//li[a[text()="next"]]')
     if next_pg_node:
         last_page = int(next_pg_node[0].xpath('./preceding-sibling::li/a[@class="endless_page_link"]/text()')[-1])
         Log(last_page)
-        main_title = '%s | Page %i of %i' %(title2, int(page), last_page)
+        main_title = '%s | Page %i of %i' %(title, page, last_page)
     else:
-        main_title = '%s | Page %i | Last Page' %(title2, int(page))
+        main_title = '%s | Page %i | Last Page' %(title, page)
 
     oc = ObjectContainer(title2=main_title, no_cache=True)
 
@@ -111,7 +163,7 @@ def DirectoryList(url, page=int):
     if next_pg_node:
         next_pg_num = int(html.xpath('//li/a[text()="next"]')[0].get('href').split('=')[1])
         oc.add(NextPageObject(
-            key=Callback(DirectoryList, url=url, page=next_pg_num),
+            key=Callback(DirectoryList, title=title, url=url, page=next_pg_num),
             title='Next Page>>'))
 
     if len(oc) > 0:

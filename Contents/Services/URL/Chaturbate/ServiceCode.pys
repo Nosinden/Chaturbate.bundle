@@ -71,8 +71,6 @@ def MediaObjectsForURL(url):
     return [
         MediaObject(
             parts=[PartObject(key=HTTPLiveStreamURL(Callback(PlayVideo, url=url)))],
-            audio_channels=2,
-            optimized_for_streaming=True
             )
         ]
 
@@ -82,15 +80,31 @@ def PlayVideo(url, **kwargs):
     """Get m3u8 playlist"""
 
     html = HTML.ElementFromURL(url, headers=HTTP_HEADERS_IPAD)
+    Log.Debug('*' * 80)
 
     try:
         m3u8_url = html.xpath('//video[@id="still_video_object"]')[0].get('src').replace(' ', '').strip()
+        Log.Debug('* m3u8_url = %s' %m3u8_url)
     except:
-        m3u8_url = None
-
-    Log('m3u8_url = %s' %m3u8_url)
-
-    if not m3u8_url:
         raise Ex.MediaNotAvailable
 
-    return IndirectResponse(VideoClipObject, key=HTTPLiveStreamURL(m3u8_url))
+    try:
+        playlist = HTTP.Request(m3u8_url).content
+        Log.Debug('* playlist = %s' %playlist)
+    except:
+        raise Ex.MediaNotAvailable
+
+    for line in playlist.splitlines(False)[1:]:
+        if line.startswith('#EXT-X-STREAM-INF'):
+            stream_search = Regex('(?P<bandwidth>\d+).*?\"(?P<codecs>.+?\,.+?)\".*?(?P<resolution>\d+.\d+)').search(line)
+            if stream_search:
+                Log.Debug('* stream search results = %s' %stream_search.groupdict())
+                continue
+            else:
+                Log.Error('* Error in #EXT-X-STREAM-INF: line | %s' %line)
+                Log.Debug('*' * 80)
+                raise Ex.MediaNotAvailable
+
+    Log.Debug('*' * 80)
+
+    return IndirectResponse(VideoClipObject, key=m3u8_url)
