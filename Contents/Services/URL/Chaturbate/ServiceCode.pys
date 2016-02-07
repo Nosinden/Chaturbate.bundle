@@ -23,8 +23,9 @@ def MetadataObjectForURL(url):
 
     title = html.xpath('//ul[@class="sub-nav"]//a/text()')[0].strip()
     slug = url.rsplit('/', 2)[1]
-    Log.Info('title = %s' %title)
-    Log.Info('slug = %s' %slug)
+    Log.Debug('*' * 80)
+    Log.Debug('* title      = %s' %title)
+    Log.Debug('* slug       = %s' %slug)
 
     q = []
     a = []
@@ -43,8 +44,9 @@ def MetadataObjectForURL(url):
             except:
                 pass
 
-    Log.Debug('q & a = %s %s' %(q, a))
-    Log.Debug('q & a len = %i %i' %(len(q), len(a)))
+    Log.Debug('* q & a      = %s %s' %(q, a))
+    Log.Debug('* q & a len  = %i %i' %(len(q), len(a)))
+    Log.Debug('*' * 80)
 
     summary_list = []
     for x, y in map(None, q, a):
@@ -64,13 +66,15 @@ def MetadataObjectForURL(url):
         birthday = birth_date.group(1)
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
     thumb = 'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg?_=%i' %(slug, time_stamp)
+    art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-default.jpg?t=%i' %time_stamp
 
     return VideoClipObject(
         title=title,
         summary=summary,
         content_rating='X',
         year=int(Datetime.ParseDate(birthday).year) if birthday else None,
-        thumb=thumb)
+        thumb=thumb,
+        art=art)
 
 ####################################################################################################
 def MediaObjectsForURL(url):
