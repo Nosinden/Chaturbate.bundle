@@ -51,14 +51,26 @@ def MetadataObjectForURL(url):
         summary_list.append(x + ' ' + y)
 
     if len(summary_list) > 0:
-        summary = '\r'.join(summary_list).strip()
+        if Client.Product == 'Plex Web':
+            summary = '\r'.join(summary_list).strip()
+        else:
+            summary = '\n'.join(summary_list).strip()
     else:
         summary = None
+
+    birth_date = Regex('Birth\ Date\:\ (.+?)\n').search(summary)
+    birthday = None
+    if birth_date:
+        birthday = birth_date.group(1)
+    time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+    thumb = 'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg?_=%i' %(slug, time_stamp)
 
     return VideoClipObject(
         title=title,
         summary=summary,
-        thumb='https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg' %slug)
+        content_rating='X',
+        year=int(Datetime.ParseDate(birthday).year) if birthday else None,
+        thumb=thumb)
 
 ####################################################################################################
 def MediaObjectsForURL(url):
