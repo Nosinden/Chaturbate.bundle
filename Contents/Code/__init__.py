@@ -45,6 +45,7 @@ CAT_DICT.update({'Status': {'list': STATUS_LIST}})
 
 def Start():
     ObjectContainer.title1 = TITLE
+    ObjectContainer.art = R(ART)
 
     DirectoryObject.thumb = R(ICON)
     DirectoryObject.art = R(ART)
@@ -56,14 +57,14 @@ def Start():
     HTTP.CacheTime = 0
 
 ####################################################################################################
-@handler(PREFIX, TITLE, ICON, ART)
+@handler(PREFIX, TITLE, thumb=ICON, art=ART)
 def MainMenu():
     """
     Setup Main menu
     Free Cams', Free Cams by Age', Free Cams by Region, Free Cams by Status
     """
 
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=TITLE, art=R(ART), no_cache=True)
 
     Updater(PREFIX + '/updater', oc)
 
