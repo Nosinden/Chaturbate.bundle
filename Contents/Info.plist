@@ -4,9 +4,15 @@
 <dict>
   <key>CFBundleIdentifier</key>
   <string>com.plexapp.plugins.chaturbate</string>
+  <key>CFBundleVersion</key>
+  <string>1.0.0</string>
+  <key>PlexPluginVersionUrl</key>
+  <string>https://api.github.com/repos/Nosinden/Chaturbate.bundle/releases/latest</string>
   <key>PlexClientPlatforms</key>
   <string>*</string>
   <key>PlexFrameworkVersion</key>
   <string>2</string>
+  <key>PlexPluginCodePolicy</key>
+  <string>Elevated</string>
 </dict>
 </plist>
