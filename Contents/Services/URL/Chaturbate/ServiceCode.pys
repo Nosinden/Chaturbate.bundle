@@ -46,7 +46,6 @@ def MetadataObjectForURL(url):
 
     Log.Debug('* q & a      = %s %s' %(q, a))
     Log.Debug('* q & a len  = %i %i' %(len(q), len(a)))
-    Log.Debug('*' * 80)
 
     summary_list = []
     for x, y in map(None, q, a):
@@ -64,6 +63,15 @@ def MetadataObjectForURL(url):
     birthday = None
     if birth_date:
         birthday = birth_date.group(1)
+        try:
+            birthday = int(Datetime.ParseDate(birthday).year)
+        except:
+            birthday = None
+
+    Log.Debug('* Birthday   = %s' %str(birthday))
+    Log.Debug('* Summary    = %s' %summary)
+    Log.Debug('*' * 80)
+
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
     thumb = 'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg?_=%i' %(slug, time_stamp)
     art = '/:/plugins/com.plexapp.plugins.chaturbate/resources/art-default.jpg?t=%i' %time_stamp
@@ -72,7 +80,7 @@ def MetadataObjectForURL(url):
         title=title,
         summary=summary,
         content_rating='X',
-        year=int(Datetime.ParseDate(birthday).year) if birthday else None,
+        year=birthday,
         thumb=thumb,
         art=art)
 
