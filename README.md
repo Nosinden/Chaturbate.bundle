@@ -24,6 +24,8 @@ How To Install
 ChangeLog
 ---------
 
+**1.0.2** - 02/08/16 - Fixed video year issue.
+
 **1.0.1** - 02/07/16 - Fixed background art. Forgot to edit url after it was copied.
 
 **1.0.0** - 02/06/16 - Added background art. Search for exact model name. Thumbnails update with time. Added updater, changed version numbering.
