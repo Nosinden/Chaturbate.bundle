@@ -6,26 +6,15 @@ HTTP_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) A
 HTTP_HEADERS_IPAD = {'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4'}
 
 ####################################################################################################
-def NormalizeURL(url):
-    """This function should return a 'normalised' version of the given URL. Plex uses the URL"""
-
-    return url
-
-####################################################################################################
 def MetadataObjectForURL(url):
-    """
-    This function should create and return a metadata object (for example, a VideoClipOb-
-    ject) and populate it with metadata from the given URL. Only the metadata should be
-    added here - the object's key and rating_key properties will be synthesised based on the URL.
-    """
 
     html = HTML.ElementFromURL(url)
 
     title = html.xpath('//ul[@class="sub-nav"]//a/text()')[0].strip()
     slug = url.rsplit('/', 2)[1]
-    Log.Debug('*' * 80)
-    Log.Debug('* title      = %s' %title)
-    Log.Debug('* slug       = %s' %slug)
+    #Log.Debug('*' * 80)
+    #Log.Debug('* title      = %s' %title)
+    #Log.Debug('* slug       = %s' %slug)
 
     q = []
     a = []
@@ -44,8 +33,8 @@ def MetadataObjectForURL(url):
             except:
                 pass
 
-    Log.Debug('* q & a      = %s %s' %(q, a))
-    Log.Debug('* q & a len  = %i %i' %(len(q), len(a)))
+    #Log.Debug('* q & a      = %s %s' %(q, a))
+    #Log.Debug('* q & a len  = %i %i' %(len(q), len(a)))
 
     summary_list = []
     for x, y in map(None, q, a):
@@ -59,10 +48,12 @@ def MetadataObjectForURL(url):
     else:
         summary = None
 
-    birth_date = Regex('Birth\ Date\:\ (.+?)\n').search(summary)
+    # TODO fix year matching
+    birth_date = Regex(r'(?m)Birth\s*?Date\:\s*?(.+?)$').search(summary)
     birthday = None
     if birth_date:
         birthday = birth_date.group(1)
+        Log(birthday)
         try:
             birthday = int(Datetime.ParseDate(birthday).year)
         except:
@@ -70,7 +61,7 @@ def MetadataObjectForURL(url):
 
     Log.Debug('* Birthday   = %s' %str(birthday))
     Log.Debug('* Summary    = %s' %summary)
-    Log.Debug('*' * 80)
+    #Log.Debug('*' * 80)
 
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
     thumb = 'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg?_=%i' %(slug, time_stamp)
@@ -86,11 +77,6 @@ def MetadataObjectForURL(url):
 
 ####################################################################################################
 def MediaObjectsForURL(url):
-    """
-    This function should create and return a list of media objects and part objects representing
-    the media available at the given URL. Callbacks may be used if obtaining the final media
-    location requires additional computation.
-    """
 
     return [
         MediaObject(
@@ -103,24 +89,23 @@ def MediaObjectsForURL(url):
 def PlayVideo(url, **kwargs):
     """Get m3u8 playlist"""
 
-    html = HTML.ElementFromURL(url, headers=HTTP_HEADERS_IPAD)
-    Log.Debug('*' * 80)
+    page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=10).content
 
     try:
-        m3u8_url = html.xpath('//video[@id="still_video_object"]')[0].get('src').replace(' ', '').strip()
-        Log.Debug('* m3u8_url = %s' %m3u8_url)
+        m3u8_urls = Regex(r'src\=[\'\"](http[^\'\"]+\.m3u8.*?)[\'\"]').findall(page)
+        Log.Debug(u"* m3u8_urls = '{}'".format(m3u8_urls))
     except:
         raise Ex.MediaNotAvailable
 
     try:
-        playlist = HTTP.Request(m3u8_url).content
-        Log.Debug('* playlist = %s' %playlist)
+        playlist = HTTP.Request(m3u8_urls[0], cacheTime=10).content
+        Log.Debug('* playlist.m3u8  = {}'.format(playlist))
     except:
         raise Ex.MediaNotAvailable
 
     for line in playlist.splitlines(False)[1:]:
         if line.startswith('#EXT-X-STREAM-INF'):
-            stream_search = Regex('(?P<bandwidth>\d+).*?\"(?P<codecs>.+?\,.+?)\".*?(?P<resolution>\d+.\d+)').search(line)
+            stream_search = Regex(r'(?P<bandwidth>\d+).*?\"(?P<codecs>.+?\,.+?)\".*?(?P<resolution>\d+.\d+)').search(line)
             if stream_search:
                 Log.Debug('* stream search results = %s' %stream_search.groupdict())
                 continue
@@ -129,6 +114,5 @@ def PlayVideo(url, **kwargs):
                 Log.Debug('*' * 80)
                 raise Ex.MediaNotAvailable
 
-    Log.Debug('*' * 80)
-
-    return IndirectResponse(VideoClipObject, key=m3u8_url)
+    Log.Debug(u"* PlayVideo URL = '{}'".format(m3u8_urls[0]))
+    return IndirectResponse(VideoClipObject, key=m3u8_urls[0])

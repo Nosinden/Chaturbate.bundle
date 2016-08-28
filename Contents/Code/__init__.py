@@ -41,6 +41,8 @@ CAT_DICT = {'Age': {'list': AGE_LIST}}
 CAT_DICT.update({'Region': {'list': REGION_LIST}})
 CAT_DICT.update({'Status': {'list': STATUS_LIST}})
 
+GENDER_DICT = {'f': 'female', 'm': 'male', 'c': 'couple', 's': 'transsexual'}
+
 ####################################################################################################
 
 def Start():
@@ -160,49 +162,33 @@ def DirectoryList(title, url, page):
         name = node.xpath('.//div[@class="title"]/a/text()')[0].strip()
         age = node.xpath('.//div[@class="title"]/span/text()')[0].strip()
         gender_href = node.xpath('.//div[@class="title"]/span')[0].get('class')
-        gender_node = gender_href.split('age gender')[-1]
         summary = node.xpath('.//ul[@class="subject"]/li/text()')
         if summary:
             if len(summary[0]) > 0:
-                summary = Regex('[^a-zA-Z0-9 \n]').sub('', summary[0]).strip()
+                summary = Regex(r'[^a-zA-Z0-9 \n]').sub('', summary[0]).strip()
             else: summary = None
         else:
             summary == None
 
-        tag1 = node.xpath('.//ul[@class="sub-info"]/li/text()')[0].strip()
-        tag2 = node.xpath('.//ul[@class="sub-info"]/li/text()')[1].strip()
+        tags = node.xpath('.//ul[@class="sub-info"]/li/text()')
+        tags = [s.strip() for s in tags]
 
-        if gender_node == 'f':
-            gender = 'female'
-        elif gender_node == 'm':
-            gender = 'male'
-        elif gender_node == 'c':
-            gender = 'couple'
-        else:
-            gender = 'transsexual'
+        gender = GENDER_DICT[gender_href.split('age gender')[-1]]
 
-        Log.Debug('*' * 80)
         try:
             year = int(Datetime.ParseDate(str(Datetime.Now())).year) - int(age)
-            try:
-                Log.Debug('* Datetime.Now().year = %i' %int(Datetime.Now().year))
-            except:
-                Log.Debug('* Datetime.ParseDate(str(Datetime.Now())).year = %i' %year)
         except:
             year = None
             Log.Debug('* cannot parse year')
-        Log.Debug('*' * 80)
 
-        oc.add(
-            VideoClipObject(
-                title=name,
-                summary=summary,
-                thumb=cover,
-                tagline='Age %s | %s | %s' %(age, tag2, tag1),
-                year=year,
-                url=cam_url
-                )
-            )
+        oc.add(VideoClipObject(
+            title=name,
+            summary=summary,
+            thumb=cover,
+            tagline=u"Age {} | {}".format(age, ' | '.join(tags)),
+            year=year,
+            url=cam_url
+            ))
 
     if next_pg_node:
         next_pg_url = BASE_URL + next_pg_node[0].get('href')
