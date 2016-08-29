@@ -48,19 +48,18 @@ def MetadataObjectForURL(url):
     else:
         summary = None
 
-    # TODO fix year matching
-    birth_date = Regex(r'(?m)Birth\s*?Date\:\s*?(.+?)$').search(summary)
-    birthday = None
-    if birth_date:
-        birthday = birth_date.group(1)
-        Log(birthday)
+    try:
+        birthday = Regex(r'(?m)Birth\s*?Date\:\s*?(.+?)$').search(summary).group(1).strip()
+        year = int(Datetime.ParseDate(birthday).year)
+    except:
         try:
-            birthday = int(Datetime.ParseDate(birthday).year)
+            age = Regex(r'(?m)Age\:\s*?(.+?)$').search(summary)
+            year = int(Datetime.ParseDate(str(Datetime.Now())).year) - int(age.group(1).strip())
         except:
-            birthday = None
+            year = None
 
-    Log.Debug('* Birthday   = %s' %str(birthday))
-    Log.Debug('* Summary    = %s' %summary)
+    #Log.Debug(u'* Year          = {}'.format(year))
+    #Log.Debug(u'* Summary       = {}'.format(summary))
     #Log.Debug('*' * 80)
 
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
@@ -71,7 +70,7 @@ def MetadataObjectForURL(url):
         title=title,
         summary=summary,
         content_rating='X',
-        year=birthday,
+        year=year,
         thumb=thumb,
         art=art)
 
@@ -101,6 +100,7 @@ def PlayVideo(url, **kwargs):
         playlist = HTTP.Request(m3u8_urls[0], cacheTime=10).content
         Log.Debug('* playlist.m3u8  = {}'.format(playlist))
     except:
+        Log.Exception(u"* Cannot parse m3u8 streams for '{}'".format(url))
         raise Ex.MediaNotAvailable
 
     for line in playlist.splitlines(False)[1:]:
