@@ -1,42 +1,47 @@
 #!/usr/bin/env python
 
-"""Chaturbate Service code - Return m3u8 stream"""
+"""
+Chaturbate.com Service code
+    :Returns hls stream from m3u8 playlist
+"""
 
-HTTP_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'}
-HTTP_HEADERS_IPAD = {'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4'}
+#HTTP_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'}
+#HTTP_HEADERS_IPAD = {'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4'}
+RE_BIRTH = Regex(r'(?m)Birth *?Date\: *?(.+?)$')
+RE_AGE = Regex(r'(?m)Age\: *?(.+?)$')
+RE_M3U8 = Regex(r'src\=["\'](http[^"\']+\.m3u8.*?)["\']')
 
 ####################################################################################################
 def MetadataObjectForURL(url):
 
-    html = HTML.ElementFromURL(url)
+    html = HTML.ElementFromURL(url, cacheTime=10)
 
-    title = html.xpath('//ul[@class="sub-nav"]//a/text()')[0].strip()
-    slug = url.rsplit('/', 2)[1]
-    #Log.Debug('*' * 80)
-    #Log.Debug('* title      = %s' %title)
-    #Log.Debug('* slug       = %s' %slug)
+    # setup title
+    title = html.xpath('//ul[@class="sub-nav"]//a/text()')
+    if not title:
+        Log.Error(u"* Error: cannot find title within '{0}'".format(url))
+        raise Ex.MediaNotAvailable
 
-    q = []
-    a = []
+    # setup summary
+    q = list()
+    a = list()
     for node in html.xpath('//div[@class="bio"]//dl/dt'):
         q_text = node.text
-        if not q_text == 'About Me:' and not q_text == 'Pics & Videos:' and not q_text == 'Wish List:':
+        if (q_text != 'About Me:') and (q_text != 'Pics & Videos:') and (q_text != 'Wish List:'):
             q.append(q_text.strip())
         else:
             break
 
     for i, node in enumerate(html.xpath('//div[@class="bio"]//dl/dd')):
-        if not i == len(q):
+        if (i != len(q)):
             try:
                 a_text = node.text
                 a.append(a_text.strip())
             except:
                 pass
 
-    #Log.Debug('* q & a      = %s %s' %(q, a))
-    #Log.Debug('* q & a len  = %i %i' %(len(q), len(a)))
-
-    summary_list = []
+    summary = None
+    summary_list = list()
     for x, y in map(None, q, a):
         summary_list.append(x + ' ' + y)
 
@@ -45,74 +50,61 @@ def MetadataObjectForURL(url):
             summary = '\r'.join(summary_list).strip()
         else:
             summary = '\n'.join(summary_list).strip()
-    else:
-        summary = None
 
+    # setup year
     try:
-        birthday = Regex(r'(?m)Birth\s*?Date\:\s*?(.+?)$').search(summary).group(1).strip()
+        birthday = RE_BIRTH.search(summary).group(1).strip()
         year = int(Datetime.ParseDate(birthday).year)
     except:
         try:
-            age = Regex(r'(?m)Age\:\s*?(.+?)$').search(summary)
+            age = RE_AGE.search(summary)
             year = int(Datetime.ParseDate(str(Datetime.Now())).year) - int(age.group(1).strip())
         except:
             year = None
 
-    #Log.Debug(u'* Year          = {}'.format(year))
-    #Log.Debug(u'* Summary       = {}'.format(summary))
-    #Log.Debug('*' * 80)
-
+    # setup thumb and art
+    slug = url.rsplit('/', 2)[1]
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
-    thumb = 'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/%s.jpg?_=%i' %(slug, time_stamp)
-    art = '/:/plugins/com.plexapp.plugins.chaturbate/resources/art-default.jpg?t=%i' %time_stamp
+    thumb = u'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/{}.jpg?_={}'.format(slug, time_stamp)
+    art = '/:/plugins/com.plexapp.plugins.chaturbate/resources/art-default.jpg?t={}'.format(time_stamp)
 
     return VideoClipObject(
-        title=title,
+        title=title[0].strip(),
         summary=summary,
         content_rating='X',
         year=year,
         thumb=thumb,
-        art=art)
+        art=art
+        )
 
 ####################################################################################################
+@deferred
 def MediaObjectsForURL(url):
+
+    try:
+        #page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=10).content
+        page = HTTP.Request(url, cacheTime=10).content
+        l = RE_M3U8.findall(page)
+        Log(u"* m3u8 list = '{}'".format(l))
+        if not l:
+            raise Ex.MediaExpired
+    except:
+        Log.Exception(u"* Error parsing for m3u8 in '{0}' >>>".format(url))
+        raise Ex.MediaNotAvailable
 
     return [
         MediaObject(
-            parts=[PartObject(key=HTTPLiveStreamURL(Callback(PlayVideo, url=url)))],
+            protocol=Protocol.HLS,
+            container=Container.MPEGTS,
+            audio_codec=AudioCodec.AAC,
+            video_codec=VideoCodec.H264,
+            audio_channels=2,
+            optimized_for_streaming=True,
+            parts=[
+                PartObject(
+                    key=HTTPLiveStreamURL(l[0]),
+                    #http_headers=HTTP_HEADERS_IPAD
+                    )
+                ],
             )
         ]
-
-####################################################################################################
-@indirect
-def PlayVideo(url, **kwargs):
-    """Get m3u8 playlist"""
-
-    page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=10).content
-
-    try:
-        m3u8_urls = Regex(r'src\=[\'\"](http[^\'\"]+\.m3u8.*?)[\'\"]').findall(page)
-        Log.Debug(u"* m3u8_urls = '{}'".format(m3u8_urls))
-    except:
-        raise Ex.MediaNotAvailable
-
-    try:
-        playlist = HTTP.Request(m3u8_urls[0], cacheTime=10).content
-        Log.Debug('* playlist.m3u8  = {}'.format(playlist))
-    except:
-        Log.Exception(u"* Cannot parse m3u8 streams for '{}'".format(url))
-        raise Ex.MediaNotAvailable
-
-    for line in playlist.splitlines(False)[1:]:
-        if line.startswith('#EXT-X-STREAM-INF'):
-            stream_search = Regex(r'(?P<bandwidth>\d+).*?\"(?P<codecs>.+?\,.+?)\".*?(?P<resolution>\d+.\d+)').search(line)
-            if stream_search:
-                Log.Debug('* stream search results = %s' %stream_search.groupdict())
-                continue
-            else:
-                Log.Error('* Error in #EXT-X-STREAM-INF: line | %s' %line)
-                Log.Debug('*' * 80)
-                raise Ex.MediaNotAvailable
-
-    Log.Debug(u"* PlayVideo URL = '{}'".format(m3u8_urls[0]))
-    return IndirectResponse(VideoClipObject, key=m3u8_urls[0])

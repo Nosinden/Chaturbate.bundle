@@ -203,14 +203,15 @@ def DirectoryList(title, url, page):
 
     if len(oc) > 0:
         return oc
-    else:
-        return MessageContainer(header='Warning', message='Page Empty')
+
+    return MessageContainer(header='Warning', message='Page Empty')
 
 ####################################################################################################
 @route(PREFIX + '/search')
 def Search(query=''):
     """Search for Exact user"""
 
+    query = query.strip()
     url = '%s/?keywords=%s' %(BASE_URL, query)
     title = 'Search for ' + query
 
