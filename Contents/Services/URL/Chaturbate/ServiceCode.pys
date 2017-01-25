@@ -88,16 +88,16 @@ def MediaObjectsForURL(url):
 def PlayVideo(url, **kwargs):
     """Get m3u8 playlist"""
 
-    page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=10).content
+    page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=0).content
 
     try:
-        m3u8_urls = Regex(r'src\=[\'\"](http[^\'\"]+\.m3u8.*?)[\'\"]').findall(page)
+        m3u8_urls = Regex(r'[\'\"](https?:\/\/[^\'\"]+\.m3u8.*?)[\'\"]').findall(page)
         Log.Debug(u"* m3u8_urls = '{}'".format(m3u8_urls))
     except:
         raise Ex.MediaNotAvailable
 
     try:
-        playlist = HTTP.Request(m3u8_urls[0], cacheTime=10).content
+        playlist = HTTP.Request(m3u8_urls[0], cacheTime=0).content
         Log.Debug('* playlist.m3u8  = {}'.format(playlist))
     except:
         Log.Exception(u"* Cannot parse m3u8 streams for '{}'".format(url))
