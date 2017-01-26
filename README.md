@@ -1,7 +1,7 @@
 Chaturbate
 ===========
 
-This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from [chaturbate.com](https://chaturbate.com/). It is currently under development and as such, should be considered alpha software and potentially unstable.  For now this is a very simple version of what it could be.
+This plugin creates a new video channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from [chaturbate.com](https://chaturbate.com/). It is currently under development and as such, should be considered alpha software and potentially unstable.  For now this is a very simple version of what it could be.
 
 > **Note:** The author of this plugin has no affiliation with [chaturbate.com](https://chaturbate.com/) site nor the owners of the content that they host.
 

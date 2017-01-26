@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+##### 1.0.4
+- 01/25/17
+  - `ServiceCode` fixed `m3u8` regex [#8ef21bb](https://github.com/Nosinden/Chaturbate.bundle/commit/8ef21bb404b03a6713f11e1000ebaabc16a654bd)
+  - `ServiceCode` fixed thumbs
+
 ##### 1.0.3
 - 08/28/16
   - `ServiceCode` fixed `year`
