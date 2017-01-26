@@ -7,9 +7,11 @@ Chaturbate.com Service code
 
 #HTTP_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36'}
 #HTTP_HEADERS_IPAD = {'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4'}
+THUMB_URL = "https://roomimg.stream.highwebmedia.com/ri/"
 RE_BIRTH = Regex(r'(?m)Birth *?Date\: *?(.+?)$')
 RE_AGE = Regex(r'(?m)Age\: *?(.+?)$')
 RE_M3U8 = Regex(r'src\=["\'](http[^"\']+\.m3u8.*?)["\']')
+RE_HLS = Regex(r'["\'](https?://[^"\']+\.m3u8.*?)["\']')
 
 ####################################################################################################
 def MetadataObjectForURL(url):
@@ -40,16 +42,8 @@ def MetadataObjectForURL(url):
             except:
                 pass
 
-    summary = None
-    summary_list = list()
-    for x, y in map(None, q, a):
-        summary_list.append(x + ' ' + y)
-
-    if len(summary_list) > 0:
-        if Client.Product == 'Plex Web':
-            summary = '\r'.join(summary_list).strip()
-        else:
-            summary = '\n'.join(summary_list).strip()
+    summary_list = [x + ' ' + y for (x, y) in map(None, q, a)]
+    summary = '\r'.join(summary_list).strip() if summary_list and Client.Product == 'Plex Web' else '\n'.join(summary_list).strip()
 
     # setup year
     try:
@@ -64,17 +58,15 @@ def MetadataObjectForURL(url):
 
     # setup thumb and art
     slug = url.rsplit('/', 2)[1]
-    time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
-    thumb = u'https://cdn-s.highwebmedia.com/uHK3McUtGCG3SMFcd4ZJsRv8/roomimage/{}.jpg?_={}'.format(slug, time_stamp)
-    art = '/:/plugins/com.plexapp.plugins.chaturbate/resources/art-default.jpg?t={}'.format(time_stamp)
+    ts = int(Datetime.TimestampFromDatetime(Datetime.Now()))
 
     return VideoClipObject(
         title=title[0].strip(),
         summary=summary,
         content_rating='X',
         year=year,
-        thumb=thumb,
-        art=art
+        thumb=THUMB_URL + slug + '.jpg?_={}'.format(ts),
+        art='/:/plugins/com.plexapp.plugins.chaturbate/resources/art-default.jpg?t={}'.format(ts)
         )
 
 ####################################################################################################
@@ -84,7 +76,8 @@ def MediaObjectsForURL(url):
     try:
         #page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=10).content
         page = HTTP.Request(url, cacheTime=10).content
-        l = RE_M3U8.findall(page)
+        #l = RE_M3U8.findall(page)
+        l = RE_HLS.findall(page)
         Log(u"* m3u8 list = '{}'".format(l))
         if not l:
             raise Ex.MediaExpired
@@ -94,10 +87,10 @@ def MediaObjectsForURL(url):
 
     return [
         MediaObject(
-            protocol=Protocol.HLS,
-            container=Container.MPEGTS,
-            audio_codec=AudioCodec.AAC,
-            video_codec=VideoCodec.H264,
+            #protocol=Protocol.HLS,
+            #container=Container.MPEGTS,
+            #audio_codec=AudioCodec.AAC,
+            #video_codec=VideoCodec.H264,
             audio_channels=2,
             optimized_for_streaming=True,
             parts=[
