@@ -92,7 +92,12 @@ def PlayVideo(url, **kwargs):
     page = HTTP.Request(url, headers=HTTP_HEADERS_IPAD, cacheTime=0).content
 
     try:
-        m3u8_urls = RE_HLS.findall(page)
+        re_hls = RE_HLS.findall(page)
+        m3u8_urls = list()
+        for u in re_hls:
+            if '&amp;' in u:
+                u = String.DecodeHTMLEntities(u)
+            m3u8_urls.append(u)
         Log.Debug(u"* m3u8_urls = '{}'".format(m3u8_urls))
     except:
         raise Ex.MediaNotAvailable
